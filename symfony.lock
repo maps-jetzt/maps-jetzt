@@ -1,4 +1,30 @@
 {
+    "doctrine/doctrine-bundle": {
+        "version": "2.13",
+        "recipe": {
+            "repo": "github.com/symfony/recipes",
+            "branch": "main",
+            "version": "2.13",
+            "ref": "8d96c0b51591ffc26794d865ba3ee7d193438a83"
+        },
+        "files": [
+            "config/packages/doctrine.yaml",
+            "src/Entity/.gitignore",
+            "src/Repository/.gitignore"
+        ]
+    },
+    "jsor/doctrine-postgis": {
+        "version": "2.3",
+        "recipe": {
+            "repo": "github.com/symfony/recipes-contrib",
+            "branch": "main",
+            "version": "1.7",
+            "ref": "211979f7917bf6edb8fc5006a17b2e84e8e84d50"
+        },
+        "files": [
+            "config/packages/jsor_doctrine_postgis.yaml"
+        ]
+    },
     "symfony/console": {
         "version": "7.1",
         "recipe": {
