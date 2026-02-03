@@ -10,10 +10,12 @@ namespace App\Service\StaticMap;
 class ImageComposer
 {
     private const string ATTRIBUTION = '© OpenStreetMap contributors';
-    private const int ATTRIBUTION_PADDING = 5;
+    private const int ATTRIBUTION_PADDING = 6;
+    private const float FONT_SIZE = 10.0;
 
     public function __construct(
         private readonly TileCalculator $tileCalculator,
+        private readonly ?string $fontPath = null,
     ) {
     }
 
@@ -120,7 +122,53 @@ class ImageComposer
         $bgColor = imagecolorallocatealpha($canvas, 255, 255, 255, 50);
         $textColor = imagecolorallocate($canvas, 0, 0, 0);
 
-        $fontSize = 2; // GD built-in font size (1-5)
+        // Try to use TrueType font, fallback to built-in font
+        $fontPath = $this->findFontPath();
+
+        if ($fontPath !== null) {
+            $this->drawAttributionTtf($canvas, $width, $height, $fontPath, $bgColor, $textColor);
+        } else {
+            $this->drawAttributionBuiltin($canvas, $width, $height, $bgColor, $textColor);
+        }
+    }
+
+    private function drawAttributionTtf(
+        \GdImage $canvas,
+        int $width,
+        int $height,
+        string $fontPath,
+        int $bgColor,
+        int $textColor,
+    ): void {
+        $bbox = imagettfbbox(self::FONT_SIZE, 0, $fontPath, self::ATTRIBUTION);
+        $textWidth = $bbox[2] - $bbox[0];
+        $textHeight = $bbox[1] - $bbox[7];
+
+        $x = $width - $textWidth - self::ATTRIBUTION_PADDING;
+        $y = $height - self::ATTRIBUTION_PADDING;
+
+        // Draw background rectangle
+        imagefilledrectangle(
+            $canvas,
+            $x - self::ATTRIBUTION_PADDING,
+            $y - $textHeight - self::ATTRIBUTION_PADDING,
+            $width,
+            $height,
+            $bgColor,
+        );
+
+        // Draw text with TrueType font
+        imagettftext($canvas, self::FONT_SIZE, 0, (int) $x, (int) $y, $textColor, $fontPath, self::ATTRIBUTION);
+    }
+
+    private function drawAttributionBuiltin(
+        \GdImage $canvas,
+        int $width,
+        int $height,
+        int $bgColor,
+        int $textColor,
+    ): void {
+        $fontSize = 2;
         $fontWidth = imagefontwidth($fontSize);
         $fontHeight = imagefontheight($fontSize);
         $textWidth = strlen(self::ATTRIBUTION) * $fontWidth;
@@ -128,7 +176,6 @@ class ImageComposer
         $x = $width - $textWidth - self::ATTRIBUTION_PADDING;
         $y = $height - $fontHeight - self::ATTRIBUTION_PADDING;
 
-        // Draw background rectangle
         imagefilledrectangle(
             $canvas,
             $x - self::ATTRIBUTION_PADDING,
@@ -138,8 +185,32 @@ class ImageComposer
             $bgColor,
         );
 
-        // Draw text
         imagestring($canvas, $fontSize, $x, $y, self::ATTRIBUTION, $textColor);
+    }
+
+    private function findFontPath(): ?string
+    {
+        // Use configured font path if available
+        if ($this->fontPath !== null && is_file($this->fontPath)) {
+            return $this->fontPath;
+        }
+
+        // Try common font locations
+        $candidates = [
+            '/System/Library/Fonts/Supplemental/Arial.ttf',        // macOS
+            '/System/Library/Fonts/Helvetica.ttc',                  // macOS
+            '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',     // Linux
+            '/usr/share/fonts/TTF/DejaVuSans.ttf',                 // Arch Linux
+            'C:/Windows/Fonts/arial.ttf',                           // Windows
+        ];
+
+        foreach ($candidates as $path) {
+            if (is_file($path)) {
+                return $path;
+            }
+        }
+
+        return null;
     }
 
     /**
