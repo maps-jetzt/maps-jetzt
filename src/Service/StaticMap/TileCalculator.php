@@ -62,26 +62,39 @@ class TileCalculator
     }
 
     /**
-     * Get all tiles needed to cover a bounding box at a given zoom level.
+     * Get all tiles needed to cover the canvas centered on a bounding box.
      *
      * @return array{tiles: array<array{x: int, y: int}>, minTile: array{x: int, y: int}, maxTile: array{x: int, y: int}}
      */
-    public function getTilesForBounds(BoundingBox $bbox, int $zoom): array
+    public function getTilesForCanvas(BoundingBox $bbox, int $zoom, int $canvasWidth, int $canvasHeight): array
     {
-        $minTile = $this->latLonToTile($bbox->maxLat, $bbox->minLon, $zoom);
-        $maxTile = $this->latLonToTile($bbox->minLat, $bbox->maxLon, $zoom);
+        // Get center of bounding box in pixels
+        $center = $bbox->getCenter();
+        $centerPixel = $this->latLonToPixel($center[0], $center[1], $zoom);
+
+        // Calculate pixel bounds of the canvas
+        $minPixelX = $centerPixel['x'] - $canvasWidth / 2;
+        $maxPixelX = $centerPixel['x'] + $canvasWidth / 2;
+        $minPixelY = $centerPixel['y'] - $canvasHeight / 2;
+        $maxPixelY = $centerPixel['y'] + $canvasHeight / 2;
+
+        // Convert pixel bounds to tile coordinates
+        $minTileX = (int) floor($minPixelX / self::TILE_SIZE);
+        $maxTileX = (int) floor($maxPixelX / self::TILE_SIZE);
+        $minTileY = (int) floor($minPixelY / self::TILE_SIZE);
+        $maxTileY = (int) floor($maxPixelY / self::TILE_SIZE);
 
         $tiles = [];
-        for ($x = $minTile['x']; $x <= $maxTile['x']; $x++) {
-            for ($y = $minTile['y']; $y <= $maxTile['y']; $y++) {
+        for ($x = $minTileX; $x <= $maxTileX; $x++) {
+            for ($y = $minTileY; $y <= $maxTileY; $y++) {
                 $tiles[] = ['x' => $x, 'y' => $y];
             }
         }
 
         return [
             'tiles' => $tiles,
-            'minTile' => $minTile,
-            'maxTile' => $maxTile,
+            'minTile' => ['x' => $minTileX, 'y' => $minTileY],
+            'maxTile' => ['x' => $maxTileX, 'y' => $maxTileY],
         ];
     }
 

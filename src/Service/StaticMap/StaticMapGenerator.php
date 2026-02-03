@@ -40,8 +40,8 @@ class StaticMapGenerator
         // 3. Calculate optimal zoom level
         $zoom = $this->tileCalculator->calculateOptimalZoom($bbox, $width, $height);
 
-        // 4. Get required tiles
-        $tilesInfo = $this->tileCalculator->getTilesForBounds($bbox, $zoom);
+        // 4. Get required tiles for entire canvas
+        $tilesInfo = $this->tileCalculator->getTilesForCanvas($bbox, $zoom, $width, $height);
 
         // 5. Fetch tiles in parallel
         $tileImages = $this->tileFetcher->fetchTiles($tilesInfo['tiles'], $zoom);
