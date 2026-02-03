@@ -7,10 +7,11 @@ namespace App\Controller;
 use App\Service\StaticMap\StaticMapGenerator;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 class StaticMapController extends AbstractController
 {
@@ -18,9 +19,11 @@ class StaticMapController extends AbstractController
     private const int MAX_HEIGHT = 2000;
     private const int MIN_SIZE = 100;
     private const int MAX_STROKE_WIDTH = 20;
+    private const string MAPS_DIR = 'maps';
 
     public function __construct(
         private readonly StaticMapGenerator $generator,
+        private readonly string $publicDir,
     ) {
     }
 
@@ -71,9 +74,11 @@ class StaticMapController extends AbstractController
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'PNG image of the map with route',
-                content: new OA\MediaType(
-                    mediaType: 'image/png'
+                description: 'URL to the generated map image',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'url', type: 'string', example: '/maps/a1b2c3d4e5f6.png'),
+                    ]
                 )
             ),
             new OA\Response(
@@ -135,22 +140,73 @@ class StaticMapController extends AbstractController
         }
 
         try {
-            $image = $this->generator->generate($polyline, $width, $height, $color, $strokeWidth);
+            // Generate MD5 hash from request parameters
+            $hash = md5(json_encode([
+                'polyline' => $polyline,
+                'width' => $width,
+                'height' => $height,
+                'color' => $color,
+                'strokeWidth' => $strokeWidth,
+            ]));
+            $filename = $hash . '.png';
 
-            return new StreamedResponse(
-                function () use ($image): void {
-                    imagepng($image);
-                    imagedestroy($image);
-                },
-                Response::HTTP_OK,
-                [
-                    'Content-Type' => 'image/png',
-                    'Cache-Control' => 'public, max-age=3600',
-                ],
+            // Ensure maps directory exists
+            $mapsDir = $this->publicDir . '/' . self::MAPS_DIR;
+            if (!is_dir($mapsDir)) {
+                mkdir($mapsDir, 0755, true);
+            }
+
+            $filePath = $mapsDir . '/' . $filename;
+
+            // Only generate if file doesn't exist (caching)
+            if (!file_exists($filePath)) {
+                $image = $this->generator->generate($polyline, $width, $height, $color, $strokeWidth);
+                imagepng($image, $filePath);
+                imagedestroy($image);
+            }
+
+            $url = $this->generateUrl(
+                'static_map_image',
+                ['filename' => $filename],
+                UrlGeneratorInterface::ABSOLUTE_URL
             );
+
+            return $this->json(['url' => $url]);
         } catch (\InvalidArgumentException $e) {
             return $this->jsonError($e->getMessage());
         }
+    }
+
+    #[Route('/maps/{filename}', name: 'static_map_image', methods: ['GET'])]
+    #[OA\Get(
+        summary: 'Get a generated static map image',
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'The PNG image',
+                content: new OA\MediaType(mediaType: 'image/png')
+            ),
+            new OA\Response(response: 404, description: 'Image not found'),
+        ]
+    )]
+    #[OA\Tag(name: 'Static Map')]
+    public function getImage(string $filename): Response
+    {
+        // Validate filename format (MD5 hash + .png)
+        if (!preg_match('/^[a-f0-9]{32}\.png$/', $filename)) {
+            throw $this->createNotFoundException();
+        }
+
+        $filePath = $this->publicDir . '/' . self::MAPS_DIR . '/' . $filename;
+
+        if (!file_exists($filePath)) {
+            throw $this->createNotFoundException();
+        }
+
+        return new BinaryFileResponse($filePath, Response::HTTP_OK, [
+            'Content-Type' => 'image/png',
+            'Cache-Control' => 'public, max-age=31536000',
+        ]);
     }
 
     private function jsonError(string $message): Response

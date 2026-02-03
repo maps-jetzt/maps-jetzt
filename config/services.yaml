@@ -29,3 +29,7 @@ services:
     App\Service\StaticMap\TileFetcher:
         arguments:
             $tileServerUrl: '%static_map.tile_server_url%'
+
+    App\Controller\StaticMapController:
+        arguments:
+            $publicDir: '%kernel.project_dir%/public'
