@@ -5,15 +5,15 @@ namespace App\Entity;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
-#[ORM\Table(name: "gpx_tracks")]
+#[ORM\Table()]
 class Activity
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(type: "integer")]
+    #[ORM\Column()]
     private int $id;
 
-    #[ORM\Column(type: "string", length: 255)]
+    #[ORM\Column()]
     private string $name;
 
     #[ORM\Column(type: "text", nullable: true)]

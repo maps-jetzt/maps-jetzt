@@ -11,6 +11,9 @@
 
 .idea
 docker
+activities/
+php.ini
+.php-version
 
 ###> symfony/webpack-encore-bundle ###
 /node_modules/
