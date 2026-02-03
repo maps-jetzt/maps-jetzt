@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Service\StaticMap\StaticMapGenerator;
+use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -24,6 +25,69 @@ class StaticMapController extends AbstractController
     }
 
     #[Route('/api/static-map', name: 'api_static_map', methods: ['POST'])]
+    #[OA\Post(
+        summary: 'Generate a static map image with a route',
+        description: 'Creates a PNG image showing a route on OpenStreetMap tiles',
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['polyline', 'width', 'height'],
+                properties: [
+                    new OA\Property(
+                        property: 'polyline',
+                        type: 'string',
+                        description: 'Google Encoded Polyline string',
+                        example: '_p~iF~ps|U_ulLnnqC_mqNvxq`@'
+                    ),
+                    new OA\Property(
+                        property: 'width',
+                        type: 'integer',
+                        description: 'Image width in pixels (100-2000)',
+                        example: 800
+                    ),
+                    new OA\Property(
+                        property: 'height',
+                        type: 'integer',
+                        description: 'Image height in pixels (100-2000)',
+                        example: 600
+                    ),
+                    new OA\Property(
+                        property: 'color',
+                        type: 'string',
+                        description: 'Route color as hex string',
+                        example: '#FF5500',
+                        default: '#FF0000'
+                    ),
+                    new OA\Property(
+                        property: 'strokeWidth',
+                        type: 'integer',
+                        description: 'Route line width in pixels (1-20)',
+                        example: 4,
+                        default: 3
+                    ),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'PNG image of the map with route',
+                content: new OA\MediaType(
+                    mediaType: 'image/png'
+                )
+            ),
+            new OA\Response(
+                response: 400,
+                description: 'Validation error',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'error', type: 'string', example: 'polyline is required'),
+                    ]
+                )
+            ),
+        ]
+    )]
+    #[OA\Tag(name: 'Static Map')]
     public function generateMap(Request $request): Response
     {
         $data = json_decode($request->getContent(), true);
