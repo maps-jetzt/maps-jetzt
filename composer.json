@@ -12,6 +12,7 @@
         "jsor/doctrine-postgis": "^2.3",
         "nelmio/api-doc-bundle": "^5.9",
         "sibyx/phpgpx": "^1.3",
+        "symfony/apache-pack": "*",
         "symfony/asset": "8.0.*",
         "symfony/console": "8.0.*",
         "symfony/dotenv": "8.0.*",
