@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\StaticMap;
 
+use App\DTO\StaticMap\MapElementInterface;
+
 /**
  * Value object representing a geographic bounding box.
  */
@@ -82,5 +84,52 @@ readonly class BoundingBox
     public function getHeight(): float
     {
         return $this->maxLat - $this->minLat;
+    }
+
+    /**
+     * Create a bounding box from an array of map elements.
+     *
+     * @param array<int, MapElementInterface> $elements Array of map elements
+     * @param float $singlePointPadding Padding in degrees for single point (default ~1km)
+     */
+    public static function fromElements(array $elements, float $singlePointPadding = 0.01): self
+    {
+        if (count($elements) === 0) {
+            throw new \InvalidArgumentException('At least 1 element is required');
+        }
+
+        $allCoordinates = [];
+        foreach ($elements as $element) {
+            $allCoordinates = array_merge($allCoordinates, $element->getCoordinates());
+        }
+
+        if (count($allCoordinates) === 0) {
+            throw new \InvalidArgumentException('Elements contain no coordinates');
+        }
+
+        $lats = array_column($allCoordinates, 0);
+        $lons = array_column($allCoordinates, 1);
+
+        $minLat = min($lats);
+        $maxLat = max($lats);
+        $minLon = min($lons);
+        $maxLon = max($lons);
+
+        // Special case: single point (all coords are the same)
+        if ($minLat === $maxLat && $minLon === $maxLon) {
+            return new self(
+                minLat: $minLat - $singlePointPadding,
+                maxLat: $maxLat + $singlePointPadding,
+                minLon: $minLon - $singlePointPadding,
+                maxLon: $maxLon + $singlePointPadding,
+            );
+        }
+
+        return new self(
+            minLat: $minLat,
+            maxLat: $maxLat,
+            minLon: $minLon,
+            maxLon: $maxLon,
+        );
     }
 }
