@@ -33,3 +33,15 @@ services:
     App\Controller\StaticMapController:
         arguments:
             $publicDir: '%kernel.project_dir%/public'
+
+    App\Service\StaticMap\FontAwesomeIconMap:
+        arguments:
+            $fontsDir: '%kernel.project_dir%/assets/fonts'
+
+    App\Service\StaticMap\MarkerRenderer:
+        arguments:
+            $iconMap: '@App\Service\StaticMap\FontAwesomeIconMap'
+
+    App\Service\StaticMap\ImageComposer:
+        arguments:
+            $markerRenderer: '@App\Service\StaticMap\MarkerRenderer'
