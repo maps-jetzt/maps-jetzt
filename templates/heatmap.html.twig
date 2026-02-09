@@ -6,7 +6,13 @@
     <div class="container-fluid g-0">
         <div class="row">
             <div class="col-12">
-                <div id="map" data-controller="heatmap" data-heatmap-identifier-value="{{ identifier }}" style="position: absolute; top: 56px; bottom: 0; width: 100%;"></div>
+                <div id="map"
+                     data-controller="heatmap"
+                     data-heatmap-identifier-value="{{ identifier }}"
+                     data-heatmap-center-lon-value="{{ centerLon }}"
+                     data-heatmap-center-lat-value="{{ centerLat }}"
+                     data-heatmap-zoom-value="{{ zoom }}"
+                     style="position: absolute; top: 56px; bottom: 0; width: 100%;"></div>
             </div>
         </div>
     </div>

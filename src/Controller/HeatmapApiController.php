@@ -18,6 +18,41 @@ use Symfony\Component\Routing\Attribute\Route;
 #[OA\Tag(name: 'Heatmaps')]
 class HeatmapApiController extends AbstractController
 {
+    private function serializeHeatmap(Heatmap $heatmap): array
+    {
+        $data = [
+            'id' => $heatmap->getId(),
+            'identifier' => $heatmap->getIdentifier(),
+            'createdAt' => $heatmap->getCreatedAt()->format(\DateTimeInterface::ATOM),
+        ];
+
+        if ($heatmap->getUpdatedAt()) {
+            $data['updatedAt'] = $heatmap->getUpdatedAt()->format(\DateTimeInterface::ATOM);
+        }
+
+        if ($heatmap->getCenterLon() !== null && $heatmap->getCenterLat() !== null) {
+            $data['center'] = [$heatmap->getCenterLon(), $heatmap->getCenterLat()];
+        }
+
+        if ($heatmap->getZoom() !== null) {
+            $data['zoom'] = $heatmap->getZoom();
+        }
+
+        return $data;
+    }
+
+    private function applyViewport(Heatmap $heatmap, array $data): void
+    {
+        if (array_key_exists('center', $data) && is_array($data['center']) && count($data['center']) === 2) {
+            $heatmap->setCenterLon((float) $data['center'][0]);
+            $heatmap->setCenterLat((float) $data['center'][1]);
+        }
+
+        if (array_key_exists('zoom', $data)) {
+            $heatmap->setZoom($data['zoom'] !== null ? (int) $data['zoom'] : null);
+        }
+    }
+
     #[Route('/api/heatmaps', name: 'api_heatmap_create', methods: ['POST'])]
     #[OA\Post(
         summary: 'Create a new heatmap',
@@ -27,17 +62,13 @@ class HeatmapApiController extends AbstractController
                 required: ['identifier'],
                 properties: [
                     new OA\Property(property: 'identifier', type: 'string'),
+                    new OA\Property(property: 'center', type: 'array', items: new OA\Items(type: 'number'), description: '[lon, lat]'),
+                    new OA\Property(property: 'zoom', type: 'integer'),
                 ],
             ),
         ),
         responses: [
-            new OA\Response(response: 201, description: 'Heatmap created', content: new OA\JsonContent(
-                properties: [
-                    new OA\Property(property: 'id', type: 'integer'),
-                    new OA\Property(property: 'identifier', type: 'string'),
-                    new OA\Property(property: 'createdAt', type: 'string', format: 'date-time'),
-                ],
-            )),
+            new OA\Response(response: 201, description: 'Heatmap created'),
             new OA\Response(response: 400, description: 'Missing identifier'),
             new OA\Response(response: 409, description: 'Identifier already exists'),
         ],
@@ -58,15 +89,47 @@ class HeatmapApiController extends AbstractController
 
         $heatmap = new Heatmap();
         $heatmap->setIdentifier($identifier);
+        $this->applyViewport($heatmap, $data);
 
         $em->persist($heatmap);
         $em->flush();
 
-        return $this->json([
-            'id' => $heatmap->getId(),
-            'identifier' => $heatmap->getIdentifier(),
-            'createdAt' => $heatmap->getCreatedAt()->format(\DateTimeInterface::ATOM),
-        ], Response::HTTP_CREATED);
+        return $this->json($this->serializeHeatmap($heatmap), Response::HTTP_CREATED);
+    }
+
+    #[Route('/api/heatmaps/{identifier}', name: 'api_heatmap_update', methods: ['PATCH'])]
+    #[OA\Patch(
+        summary: 'Update heatmap properties',
+        parameters: [
+            new OA\Parameter(name: 'identifier', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'center', type: 'array', items: new OA\Items(type: 'number'), description: '[lon, lat]'),
+                    new OA\Property(property: 'zoom', type: 'integer'),
+                ],
+            ),
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Heatmap updated'),
+            new OA\Response(response: 404, description: 'Heatmap not found'),
+        ],
+    )]
+    public function updateHeatmap(string $identifier, Request $request, EntityManagerInterface $em): JsonResponse
+    {
+        $heatmap = $em->getRepository(Heatmap::class)->findOneBy(['identifier' => $identifier]);
+        if (!$heatmap) {
+            return $this->json(['error' => 'Heatmap not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        $this->applyViewport($heatmap, $data);
+
+        $em->flush();
+
+        return $this->json($this->serializeHeatmap($heatmap));
     }
 
     #[Route('/api/heatmaps/{identifier}/polylines', name: 'api_heatmap_polylines', methods: ['POST'])]

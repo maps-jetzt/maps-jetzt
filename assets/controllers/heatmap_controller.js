@@ -11,6 +11,9 @@ import Map from 'ol/Map';
 export default class extends Controller {
     static values = {
         identifier: String,
+        centerLon: { type: Number, default: 10 },
+        centerLat: { type: Number, default: 53 },
+        zoom: { type: Number, default: 12 },
     };
 
     connect() {
@@ -37,8 +40,8 @@ export default class extends Controller {
             target: this.element,
             layers: [baseLayer, vectorTileLayer],
             view: new View({
-                center: fromLonLat([10, 53]),
-                zoom: 12,
+                center: fromLonLat([this.centerLonValue, this.centerLatValue]),
+                zoom: this.zoomValue,
             }),
         });
 

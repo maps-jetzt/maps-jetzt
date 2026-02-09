@@ -19,6 +19,15 @@ class Heatmap
     #[ORM\Column(length: 255, unique: true)]
     private string $identifier;
 
+    #[ORM\Column(nullable: true)]
+    private ?float $centerLon = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?float $centerLat = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $zoom = null;
+
     #[ORM\Column()]
     private \DateTimeImmutable $createdAt;
 
@@ -54,6 +63,39 @@ class Heatmap
     public function setIdentifier(string $identifier): self
     {
         $this->identifier = $identifier;
+        return $this;
+    }
+
+    public function getCenterLon(): ?float
+    {
+        return $this->centerLon;
+    }
+
+    public function setCenterLon(?float $centerLon): self
+    {
+        $this->centerLon = $centerLon;
+        return $this;
+    }
+
+    public function getCenterLat(): ?float
+    {
+        return $this->centerLat;
+    }
+
+    public function setCenterLat(?float $centerLat): self
+    {
+        $this->centerLat = $centerLat;
+        return $this;
+    }
+
+    public function getZoom(): ?int
+    {
+        return $this->zoom;
+    }
+
+    public function setZoom(?int $zoom): self
+    {
+        $this->zoom = $zoom;
         return $this;
     }
 
