@@ -8,6 +8,7 @@ import { MVT } from 'ol/format';
 import { apply } from 'ol-mapbox-style';
 import Map from 'ol/Map';
 import Control from 'ol/control/Control';
+import libertyStyle from '../styles/liberty.json';
 
 const COLOR_SCHEMES = {
     fire:   'rgba(255, 50, 0, 0.15)',
@@ -83,6 +84,6 @@ export default class extends Controller {
 
         map.addControl(new Control({ element: controlElement }));
 
-        apply(baseLayer, 'https://tiles.openfreemap.org/styles/liberty');
+        apply(baseLayer, libertyStyle);
     }
 }
