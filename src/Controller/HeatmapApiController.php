@@ -12,7 +12,6 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\Routing\Attribute\Route;
 
 #[OA\Tag(name: 'Heatmaps')]
@@ -335,50 +334,50 @@ class HeatmapApiController extends AbstractController
             ]);
         }
 
-        $response = new StreamedResponse(function () use ($connection, $identifier, $z, $x, $y) {
-            $sql = "
-                SELECT ST_AsMVT(tile, 'heatmap', 4096, 'geom') AS mvt
-                FROM (
-                    SELECT hp.id,
-                           ST_AsMVTGeom(
-                               hp.geom,
-                               ST_TileEnvelope(:z, :x, :y),
-                               4096,
-                               256,
-                               true
-                           ) AS geom
-                    FROM heatmap_polyline hp
-                    JOIN heatmap h ON h.id = hp.heatmap_id
-                    WHERE h.identifier = :identifier
-                      AND ST_Intersects(
-                          hp.geom,
-                          ST_TileEnvelope(:z, :x, :y)
-                      )
-                ) AS tile
-            ";
+        $sql = "
+            SELECT ST_AsMVT(tile, 'heatmap', 4096, 'geom') AS mvt
+            FROM (
+                SELECT hp.id,
+                       ST_AsMVTGeom(
+                           hp.geom,
+                           ST_TileEnvelope(:z, :x, :y),
+                           4096,
+                           256,
+                           true
+                       ) AS geom
+                FROM heatmap_polyline hp
+                JOIN heatmap h ON h.id = hp.heatmap_id
+                WHERE h.identifier = :identifier
+                  AND ST_Intersects(
+                      hp.geom,
+                      ST_TileEnvelope(:z, :x, :y)
+                  )
+            ) AS tile
+        ";
 
-            $stmt = $connection->executeQuery($sql, [
-                'z' => $z,
-                'x' => $x,
-                'y' => $y,
-                'identifier' => $identifier,
-            ]);
+        $stmt = $connection->executeQuery($sql, [
+            'z' => $z,
+            'x' => $x,
+            'y' => $y,
+            'identifier' => $identifier,
+        ]);
 
-            $resource = $stmt->fetchOne();
+        $mvt = $stmt->fetchOne();
 
-            if (is_resource($resource)) {
-                fpassthru($resource);
-            } elseif ($resource !== false) {
-                echo $resource;
-            }
-        }, 200, [
+        if (is_resource($mvt)) {
+            $mvt = stream_get_contents($mvt);
+        }
+
+        if ($mvt === false) {
+            $mvt = '';
+        }
+
+        return new Response($mvt, 200, [
             'Content-Type' => 'application/x-protobuf',
-            'Content-Disposition' => 'inline; filename="tile.mvt"',
+            'Content-Length' => strlen($mvt),
             'Access-Control-Allow-Origin' => '*',
             'Cache-Control' => 'public, max-age=3600',
             'ETag' => $etag,
         ]);
-
-        return $response;
     }
 }
