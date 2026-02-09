@@ -256,18 +256,6 @@ class StaticMapController extends AbstractController
     }
 
     #[Route('/maps/{filename}', name: 'static_map_image', methods: ['GET'])]
-    #[OA\Get(
-        summary: 'Get a generated static map image',
-        responses: [
-            new OA\Response(
-                response: 200,
-                description: 'The PNG image',
-                content: new OA\MediaType(mediaType: 'image/png')
-            ),
-            new OA\Response(response: 404, description: 'Image not found'),
-        ]
-    )]
-    #[OA\Tag(name: 'Static Map')]
     public function getImage(string $filename): Response
     {
         // Validate filename format (MD5 hash + .png)
@@ -285,6 +273,35 @@ class StaticMapController extends AbstractController
             'Content-Type' => 'image/png',
             'Cache-Control' => 'public, max-age=31536000',
         ]);
+    }
+
+    #[Route('/api/maps/{filename}', name: 'static_map_delete', methods: ['DELETE'])]
+    #[OA\Delete(
+        summary: 'Delete a generated static map image',
+        parameters: [
+            new OA\Parameter(name: 'filename', in: 'path', required: true, schema: new OA\Schema(type: 'string', example: 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4.png')),
+        ],
+        responses: [
+            new OA\Response(response: 204, description: 'Image deleted'),
+            new OA\Response(response: 404, description: 'Image not found'),
+        ]
+    )]
+    #[OA\Tag(name: 'Static Map')]
+    public function deleteImage(string $filename): Response
+    {
+        if (!preg_match('/^[a-f0-9]{32}\.png$/', $filename)) {
+            throw $this->createNotFoundException();
+        }
+
+        $filePath = $this->publicDir . '/' . self::MAPS_DIR . '/' . $filename;
+
+        if (!file_exists($filePath)) {
+            throw $this->createNotFoundException();
+        }
+
+        unlink($filePath);
+
+        return new Response(null, Response::HTTP_NO_CONTENT);
     }
 
     private function jsonError(string $message): Response
