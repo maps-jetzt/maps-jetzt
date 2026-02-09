@@ -32,9 +32,9 @@ class ApiController extends AbstractController
             $sql = '
                 SELECT ST_AsMVT(tile) AS mvt
                 FROM (
-                    SELECT id, name, ST_AsMVTGeom(geom, tile_bbox(:z, :x, :y), 4096, 256, true) AS geom
+                    SELECT id, name, ST_AsMVTGeom(geom, ST_TileEnvelope(:z, :x, :y), 4096, 256, true) AS geom
                     FROM activity
-                    WHERE geom && tile_bbox(:z, :x, :y)
+                    WHERE geom && ST_TileEnvelope(:z, :x, :y)
                 ) AS tile
             ';
 
