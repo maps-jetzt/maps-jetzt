@@ -24,14 +24,19 @@ export default class extends Controller {
                 format: new MVT(),
                 url: `/tiles/heatmaps/${identifier}/{z}/{x}/{y}.mvt`,
             }),
-            style: function () {
-                return new Style({
-                    stroke: new Stroke({
-                        color: 'rgba(255, 0, 0, 1)',
-                        width: 2,
-                    }),
-                });
-            },
+            style: new Style({
+                stroke: new Stroke({
+                    color: 'rgba(255, 50, 0, 0.15)',
+                    width: 3,
+                }),
+            }),
+        });
+
+        vectorTileLayer.on('prerender', function (evt) {
+            evt.context.globalCompositeOperation = 'lighter';
+        });
+        vectorTileLayer.on('postrender', function (evt) {
+            evt.context.globalCompositeOperation = 'source-over';
         });
 
         const baseLayer = new Group();
