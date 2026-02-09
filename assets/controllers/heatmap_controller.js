@@ -44,10 +44,20 @@ export default class extends Controller {
                     ctx.lineJoin = 'round';
                     ctx.lineCap = 'round';
                     ctx.beginPath();
-                    ctx.moveTo(coordinates[0][0], coordinates[0][1]);
-                    for (let i = 1; i < coordinates.length; i++) {
-                        ctx.lineTo(coordinates[i][0], coordinates[i][1]);
+
+                    // ST_AsMVTGeom may clip polylines at tile boundaries,
+                    // producing MultiLineString (nested arrays) instead of LineString.
+                    const lines = Array.isArray(coordinates[0][0])
+                        ? coordinates   // MultiLineString: [[pt, pt, ...], [pt, pt, ...]]
+                        : [coordinates]; // LineString: [pt, pt, ...]
+
+                    for (const line of lines) {
+                        ctx.moveTo(line[0][0], line[0][1]);
+                        for (let i = 1; i < line.length; i++) {
+                            ctx.lineTo(line[i][0], line[i][1]);
+                        }
                     }
+
                     ctx.stroke();
                 },
             }),
