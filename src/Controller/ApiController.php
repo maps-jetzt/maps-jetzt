@@ -3,15 +3,28 @@
 namespace App\Controller;
 
 use Doctrine\DBAL\Connection;
+use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\Routing\Annotation\Route;
 
+#[OA\Tag(name: 'Activities')]
 class ApiController extends AbstractController
 {
     #[Route('/api/tiles/{z}/{x}/{y}.mvt', name: 'tiles', methods: ['GET'])]
+    #[OA\Get(
+        summary: 'Get activity MVT tiles',
+        parameters: [
+            new OA\Parameter(name: 'z', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'x', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'y', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'MVT tile', content: new OA\MediaType(mediaType: 'application/x-protobuf')),
+        ],
+    )]
     public function getTiles(int $z, int $x, int $y, Connection $connection): StreamedResponse
     {
         return new StreamedResponse(function () use ($connection, $z, $x, $y) {
@@ -46,6 +59,31 @@ class ApiController extends AbstractController
     }
 
     #[Route('/api/tracks', name: 'api_tracks', methods: ['GET'])]
+    #[OA\Get(
+        summary: 'Get all tracks as GeoJSON FeatureCollection',
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'GeoJSON FeatureCollection',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'type', type: 'string', example: 'FeatureCollection'),
+                        new OA\Property(property: 'features', type: 'array', items: new OA\Items(
+                            properties: [
+                                new OA\Property(property: 'type', type: 'string', example: 'Feature'),
+                                new OA\Property(property: 'properties', properties: [
+                                    new OA\Property(property: 'id', type: 'integer'),
+                                    new OA\Property(property: 'name', type: 'string'),
+                                ], type: 'object'),
+                                new OA\Property(property: 'geometry', type: 'object'),
+                            ],
+                            type: 'object',
+                        )),
+                    ],
+                ),
+            ),
+        ],
+    )]
     public function getTracks(Connection $connection): JsonResponse
     {
         $tracks = $connection->fetchAllAssociative('
