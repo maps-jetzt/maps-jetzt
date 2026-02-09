@@ -23,6 +23,9 @@ class GooglePolylineDecoder
                 $result = 0;
 
                 do {
+                    if ($index >= $len) {
+                        break;
+                    }
                     $byte = ord($encoded[$index++]) - 63;
                     $result |= ($byte & 0x1F) << $shift;
                     $shift += 5;
