@@ -50,6 +50,11 @@ class Heatmap
         $this->updatedAt = new \DateTimeImmutable();
     }
 
+    public function touch(): void
+    {
+        $this->updatedAt = new \DateTimeImmutable();
+    }
+
     public function getId(): int
     {
         return $this->id;

@@ -204,6 +204,7 @@ class HeatmapApiController extends AbstractController
             }
         }
 
+        $heatmap->touch();
         $em->flush();
 
         return $this->json([
@@ -302,6 +303,11 @@ class HeatmapApiController extends AbstractController
         if ($affected === 0) {
             return $this->json(['error' => 'Polyline not found'], Response::HTTP_NOT_FOUND);
         }
+
+        $connection->executeStatement(
+            'UPDATE heatmap SET updated_at = NOW() WHERE id = :id',
+            ['id' => $heatmapId],
+        );
 
         return new Response(null, Response::HTTP_NO_CONTENT);
     }
