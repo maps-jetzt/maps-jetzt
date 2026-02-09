@@ -7,7 +7,6 @@ import { Style } from 'ol/style';
 import { MVT } from 'ol/format';
 import { apply } from 'ol-mapbox-style';
 import Map from 'ol/Map';
-import Control from 'ol/control/Control';
 import libertyStyle from '../styles/liberty.json';
 
 const COLOR_SCHEMES = {
@@ -54,22 +53,13 @@ export default class extends Controller {
             }),
         });
 
-        // Color scheme dropdown control
-        const select = document.createElement('select');
-        for (const [name, color] of Object.entries(COLOR_SCHEMES)) {
-            const option = document.createElement('option');
-            option.value = color;
-            option.textContent = name.charAt(0).toUpperCase() + name.slice(1);
-            select.appendChild(option);
+        const select = document.getElementById('color-scheme');
+        if (select) {
+            select.addEventListener('change', () => {
+                currentColor = COLOR_SCHEMES[select.value];
+                vectorTileLayer.changed();
+            });
         }
-        select.addEventListener('change', () => {
-            currentColor = select.value;
-            vectorTileLayer.changed();
-        });
-
-        const controlElement = document.createElement('div');
-        controlElement.className = 'color-scheme-control ol-unselectable ol-control';
-        controlElement.appendChild(select);
 
         const baseLayer = new Group();
 
@@ -81,8 +71,6 @@ export default class extends Controller {
                 zoom: this.zoomValue,
             }),
         });
-
-        map.addControl(new Control({ element: controlElement }));
 
         apply(baseLayer, libertyStyle);
     }
