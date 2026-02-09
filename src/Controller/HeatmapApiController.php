@@ -186,7 +186,7 @@ class HeatmapApiController extends AbstractController
             $wkt = $decoder->decodeToWkt($encoded);
 
             $result = $conn->fetchOne(
-                'SELECT ST_AsText(ST_Transform(ST_GeomFromText(:wkt), 3857))',
+                'SELECT ST_AsEWKT(ST_Transform(ST_GeomFromText(:wkt, 4326), 3857))',
                 ['wkt' => $wkt]
             );
 
