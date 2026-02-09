@@ -142,7 +142,7 @@ class HeatmapApiControllerTest extends WebTestCase
         ], json_encode(['polylines' => self::POLYLINES]));
 
         // Request tile at zoom 12 covering Hamburg center
-        $client->request('GET', "/api/heatmaps/{$identifier}/tiles/12/2148/1350.mvt");
+        $client->request('GET', "/tiles/heatmaps/{$identifier}/12/2148/1350.mvt");
 
         $response = $client->getResponse();
         self::assertSame(200, $response->getStatusCode());
@@ -174,7 +174,7 @@ class HeatmapApiControllerTest extends WebTestCase
         self::assertSame(2, $data['polylinesAdded']);
 
         // 3. Fetch a tile
-        $client->request('GET', "/api/heatmaps/{$identifier}/tiles/12/2148/1350.mvt");
+        $client->request('GET', "/tiles/heatmaps/{$identifier}/12/2148/1350.mvt");
         self::assertSame(200, $client->getResponse()->getStatusCode());
     }
 }

@@ -6,29 +6,18 @@ use Doctrine\DBAL\Connection;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\Routing\Attribute\Route;
 
 #[OA\Tag(name: 'Activities')]
 class ApiController extends AbstractController
 {
-    #[Route('/api/tiles/{z}/{x}/{y}.mvt', name: 'tiles', methods: ['GET'])]
-    #[OA\Get(
-        summary: 'Get activity MVT tiles',
-        parameters: [
-            new OA\Parameter(name: 'z', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-            new OA\Parameter(name: 'x', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-            new OA\Parameter(name: 'y', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-        ],
-        responses: [
-            new OA\Response(response: 200, description: 'MVT tile', content: new OA\MediaType(mediaType: 'application/x-protobuf')),
-        ],
-    )]
+    #[Route('/tiles/{z}/{x}/{y}.mvt', name: 'tiles', methods: ['GET'])]
     public function getTiles(int $z, int $x, int $y, Connection $connection): StreamedResponse
     {
+        $etag = md5("activity-{$z}-{$x}-{$y}");
+
         return new StreamedResponse(function () use ($connection, $z, $x, $y) {
-            // SQL-Abfrage für die Tile-Daten
             $sql = '
                 SELECT ST_AsMVT(tile) AS mvt
                 FROM (
@@ -38,23 +27,20 @@ class ApiController extends AbstractController
                 ) AS tile
             ';
 
-            // Abfrage ausführen
             $stmt = $connection->executeQuery($sql, ['z' => $z, 'x' => $x, 'y' => $y]);
 
-            // Das Ergebnis als Stream lesen
             $resource = $stmt->fetchOne();
 
-            // Sicherstellen, dass es Daten gibt
-            if ($resource === false) {
-                throw new \RuntimeException('No data available for the requested tile.');
+            if (is_resource($resource)) {
+                fpassthru($resource);
+            } elseif ($resource !== false) {
+                echo $resource;
             }
-
-            $outputStream = fopen('php://output', 'wb');
-
-            stream_copy_to_stream($resource, $outputStream);
         }, 200, [
             'Content-Type' => 'application/x-protobuf',
             'Content-Disposition' => 'inline; filename="tile.mvt"',
+            'Cache-Control' => 'public, max-age=3600',
+            'ETag' => $etag,
         ]);
     }
 

@@ -8,6 +8,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
 #[ORM\Table()]
+#[ORM\HasLifecycleCallbacks]
 class Heatmap
 {
     #[ORM\Id]
@@ -21,6 +22,9 @@ class Heatmap
     #[ORM\Column()]
     private \DateTimeImmutable $createdAt;
 
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $updatedAt = null;
+
     /** @var Collection<int, HeatmapPolyline> */
     #[ORM\OneToMany(targetEntity: HeatmapPolyline::class, mappedBy: 'heatmap', cascade: ['remove'])]
     private Collection $polylines;
@@ -29,6 +33,12 @@ class Heatmap
     {
         $this->createdAt = new \DateTimeImmutable();
         $this->polylines = new ArrayCollection();
+    }
+
+    #[ORM\PreUpdate]
+    public function onPreUpdate(): void
+    {
+        $this->updatedAt = new \DateTimeImmutable();
     }
 
     public function getId(): int
@@ -50,6 +60,11 @@ class Heatmap
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
+    }
+
+    public function getUpdatedAt(): ?\DateTimeImmutable
+    {
+        return $this->updatedAt;
     }
 
     /** @return Collection<int, HeatmapPolyline> */

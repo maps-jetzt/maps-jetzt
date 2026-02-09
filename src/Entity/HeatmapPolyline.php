@@ -10,6 +10,8 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity]
 #[ORM\Table()]
+#[ORM\UniqueConstraint(columns: ['heatmap_id', 'hash'])]
+#[ORM\HasLifecycleCallbacks]
 class HeatmapPolyline
 {
     #[ORM\Id]
@@ -21,8 +23,20 @@ class HeatmapPolyline
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private Heatmap $heatmap;
 
+    #[ORM\Column(length: 32)]
+    private string $hash;
+
     #[ORM\Column(type: "geometry", options: ["geometry_type" => "LINESTRING", "srid" => 3857])]
     private $geom;
+
+    #[ORM\Column()]
+    private \DateTimeImmutable $createdAt;
+
+    #[ORM\PrePersist]
+    public function onPrePersist(): void
+    {
+        $this->createdAt = new \DateTimeImmutable();
+    }
 
     public function getId(): int
     {
@@ -40,6 +54,17 @@ class HeatmapPolyline
         return $this;
     }
 
+    public function getHash(): string
+    {
+        return $this->hash;
+    }
+
+    public function setHash(string $hash): self
+    {
+        $this->hash = $hash;
+        return $this;
+    }
+
     public function getGeom()
     {
         return $this->geom;
@@ -49,5 +74,10 @@ class HeatmapPolyline
     {
         $this->geom = $geom;
         return $this;
+    }
+
+    public function getCreatedAt(): \DateTimeImmutable
+    {
+        return $this->createdAt;
     }
 }

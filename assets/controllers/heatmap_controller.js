@@ -18,7 +18,7 @@ export default class extends Controller {
         const vectorTileLayer = new VectorTileLayer({
             source: new VectorTileSource({
                 format: new MVT(),
-                url: `/api/heatmaps/${identifier}/tiles/{z}/{x}/{y}.mvt`,
+                url: `/tiles/heatmaps/${identifier}/{z}/{x}/{y}.mvt`,
             }),
             style: function () {
                 return new Style({

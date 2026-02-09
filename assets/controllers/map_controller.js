@@ -21,7 +21,7 @@ export default class extends Controller {
         const vectorTileLayer = new VectorTileLayer({
             source: new VectorTileSource({
                 format: new MVT(),
-                url: '/api/tiles/{z}/{x}/{y}.mvt'
+                url: '/tiles/{z}/{x}/{y}.mvt'
             }),
             style: new Style({
                 stroke: new Stroke({

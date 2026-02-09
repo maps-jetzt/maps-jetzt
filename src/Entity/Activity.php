@@ -6,6 +6,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
 #[ORM\Table()]
+#[ORM\HasLifecycleCallbacks]
 class Activity
 {
     #[ORM\Id]
@@ -21,6 +22,24 @@ class Activity
 
     #[ORM\Column(type: "geometry", options: ["geometry_type" => "LINESTRING", "srid" => 4326])]
     private $geom;
+
+    #[ORM\Column()]
+    private \DateTimeImmutable $createdAt;
+
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $updatedAt = null;
+
+    #[ORM\PrePersist]
+    public function onPrePersist(): void
+    {
+        $this->createdAt = new \DateTimeImmutable();
+    }
+
+    #[ORM\PreUpdate]
+    public function onPreUpdate(): void
+    {
+        $this->updatedAt = new \DateTimeImmutable();
+    }
 
     public function getId(): int
     {
@@ -58,5 +77,15 @@ class Activity
     {
         $this->geom = $geom;
         return $this;
+    }
+
+    public function getCreatedAt(): \DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
+
+    public function getUpdatedAt(): ?\DateTimeImmutable
+    {
+        return $this->updatedAt;
     }
 }

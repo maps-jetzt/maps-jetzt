@@ -89,6 +89,7 @@ class HeatmapApiController extends AbstractController
                 properties: [
                     new OA\Property(property: 'identifier', type: 'string'),
                     new OA\Property(property: 'polylinesAdded', type: 'integer'),
+                    new OA\Property(property: 'hashes', type: 'array', items: new OA\Items(type: 'string')),
                 ],
             )),
             new OA\Response(response: 400, description: 'Missing polylines'),
@@ -115,8 +116,10 @@ class HeatmapApiController extends AbstractController
 
         $conn = $em->getConnection();
         $count = 0;
+        $hashes = [];
 
         foreach ($polylines as $encoded) {
+            $hash = md5($encoded);
             $wkt = $decoder->decodeToWkt($encoded);
 
             $result = $conn->fetchOne(
@@ -126,9 +129,11 @@ class HeatmapApiController extends AbstractController
 
             $polyline = new HeatmapPolyline();
             $polyline->setHeatmap($heatmap);
+            $polyline->setHash($hash);
             $polyline->setGeom($result);
 
             $em->persist($polyline);
+            $hashes[] = $hash;
             $count++;
 
             if ($count % 50 === 0) {
@@ -141,22 +146,104 @@ class HeatmapApiController extends AbstractController
         return $this->json([
             'identifier' => $identifier,
             'polylinesAdded' => $count,
+            'hashes' => $hashes,
         ], Response::HTTP_CREATED);
     }
 
-    #[Route('/api/heatmaps/{identifier}/tiles/{z}/{x}/{y}.mvt', name: 'api_heatmap_tiles', methods: ['GET'])]
+    #[Route('/api/heatmaps/{identifier}/polylines', name: 'api_heatmap_polylines_list', methods: ['GET'])]
     #[OA\Get(
-        summary: 'Get heatmap MVT tiles',
+        summary: 'List all polylines of a heatmap',
         parameters: [
             new OA\Parameter(name: 'identifier', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
-            new OA\Parameter(name: 'z', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-            new OA\Parameter(name: 'x', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-            new OA\Parameter(name: 'y', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'MVT tile', content: new OA\MediaType(mediaType: 'application/x-protobuf')),
+            new OA\Response(response: 200, description: 'List of polylines', content: new OA\JsonContent(
+                type: 'array',
+                items: new OA\Items(
+                    properties: [
+                        new OA\Property(property: 'hash', type: 'string'),
+                        new OA\Property(property: 'createdAt', type: 'string', format: 'date-time'),
+                        new OA\Property(property: 'bbox', type: 'array', items: new OA\Items(type: 'number')),
+                    ],
+                ),
+            )),
+            new OA\Response(response: 404, description: 'Heatmap not found'),
         ],
     )]
+    public function listPolylines(string $identifier, Connection $connection): JsonResponse
+    {
+        $heatmapId = $connection->fetchOne(
+            'SELECT id FROM heatmap WHERE identifier = :identifier',
+            ['identifier' => $identifier],
+        );
+
+        if ($heatmapId === false) {
+            return $this->json(['error' => 'Heatmap not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $rows = $connection->fetchAllAssociative(
+            'SELECT hp.hash,
+                    hp.created_at,
+                    ST_XMin(ST_Transform(ST_Envelope(hp.geom), 4326)) AS min_lon,
+                    ST_YMin(ST_Transform(ST_Envelope(hp.geom), 4326)) AS min_lat,
+                    ST_XMax(ST_Transform(ST_Envelope(hp.geom), 4326)) AS max_lon,
+                    ST_YMax(ST_Transform(ST_Envelope(hp.geom), 4326)) AS max_lat
+             FROM heatmap_polyline hp
+             WHERE hp.heatmap_id = :heatmapId
+             ORDER BY hp.created_at DESC',
+            ['heatmapId' => $heatmapId],
+        );
+
+        $result = array_map(fn(array $row) => [
+            'hash' => $row['hash'],
+            'createdAt' => $row['created_at'],
+            'bbox' => [
+                (float) $row['min_lon'],
+                (float) $row['min_lat'],
+                (float) $row['max_lon'],
+                (float) $row['max_lat'],
+            ],
+        ], $rows);
+
+        return $this->json($result);
+    }
+
+    #[Route('/api/heatmaps/{identifier}/polylines/{hash}', name: 'api_heatmap_polyline_delete', methods: ['DELETE'])]
+    #[OA\Delete(
+        summary: 'Delete a polyline by hash',
+        parameters: [
+            new OA\Parameter(name: 'identifier', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'hash', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [
+            new OA\Response(response: 204, description: 'Polyline deleted'),
+            new OA\Response(response: 404, description: 'Heatmap or polyline not found'),
+        ],
+    )]
+    public function deletePolyline(string $identifier, string $hash, Connection $connection): Response
+    {
+        $heatmapId = $connection->fetchOne(
+            'SELECT id FROM heatmap WHERE identifier = :identifier',
+            ['identifier' => $identifier],
+        );
+
+        if ($heatmapId === false) {
+            return $this->json(['error' => 'Heatmap not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $affected = $connection->executeStatement(
+            'DELETE FROM heatmap_polyline WHERE heatmap_id = :heatmapId AND hash = :hash',
+            ['heatmapId' => $heatmapId, 'hash' => $hash],
+        );
+
+        if ($affected === 0) {
+            return $this->json(['error' => 'Polyline not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        return new Response(null, Response::HTTP_NO_CONTENT);
+    }
+
+    #[Route('/tiles/heatmaps/{identifier}/{z}/{x}/{y}.mvt', name: 'heatmap_tiles', methods: ['GET'])]
     public function getTiles(
         string $identifier,
         int $z,
@@ -164,7 +251,9 @@ class HeatmapApiController extends AbstractController
         int $y,
         Connection $connection,
     ): StreamedResponse {
-        return new StreamedResponse(function () use ($connection, $identifier, $z, $x, $y) {
+        $etag = md5("heatmap-{$identifier}-{$z}-{$x}-{$y}");
+
+        $response = new StreamedResponse(function () use ($connection, $identifier, $z, $x, $y) {
             $sql = "
                 SELECT ST_AsMVT(tile, 'heatmap', 4096, 'geom') AS mvt
                 FROM (
@@ -204,6 +293,10 @@ class HeatmapApiController extends AbstractController
             'Content-Type' => 'application/x-protobuf',
             'Content-Disposition' => 'inline; filename="tile.mvt"',
             'Access-Control-Allow-Origin' => '*',
+            'Cache-Control' => 'public, max-age=3600',
+            'ETag' => $etag,
         ]);
+
+        return $response;
     }
 }
