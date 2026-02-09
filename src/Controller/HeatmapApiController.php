@@ -319,8 +319,21 @@ class HeatmapApiController extends AbstractController
         int $x,
         int $y,
         Connection $connection,
-    ): StreamedResponse {
-        $etag = md5("heatmap-{$identifier}-{$z}-{$x}-{$y}");
+        Request $request,
+    ): Response {
+        $timestamp = $connection->fetchOne(
+            'SELECT COALESCE(updated_at, created_at) FROM heatmap WHERE identifier = :identifier',
+            ['identifier' => $identifier],
+        );
+
+        $etag = '"' . md5("{$identifier}-{$z}-{$x}-{$y}-{$timestamp}") . '"';
+
+        if ($request->headers->get('If-None-Match') === $etag) {
+            return new Response(null, Response::HTTP_NOT_MODIFIED, [
+                'ETag' => $etag,
+                'Cache-Control' => 'public, max-age=3600',
+            ]);
+        }
 
         $response = new StreamedResponse(function () use ($connection, $identifier, $z, $x, $y) {
             $sql = "
