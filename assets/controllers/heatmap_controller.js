@@ -7,6 +7,14 @@ import { Style } from 'ol/style';
 import { MVT } from 'ol/format';
 import { apply } from 'ol-mapbox-style';
 import Map from 'ol/Map';
+import Control from 'ol/control/Control';
+
+const COLOR_SCHEMES = {
+    fire:   'rgba(255, 50, 0, 0.15)',
+    blue:   'rgba(0, 100, 255, 0.15)',
+    purple: 'rgba(150, 0, 255, 0.15)',
+    green:  'rgba(0, 200, 50, 0.15)',
+};
 
 export default class extends Controller {
     static values = {
@@ -18,6 +26,7 @@ export default class extends Controller {
 
     connect() {
         const identifier = this.identifierValue;
+        let currentColor = COLOR_SCHEMES.fire;
 
         const vectorTileLayer = new VectorTileLayer({
             className: 'heatmap-layer',
@@ -30,7 +39,7 @@ export default class extends Controller {
                 renderer(coordinates, state) {
                     const ctx = state.context;
                     ctx.globalCompositeOperation = 'lighter';
-                    ctx.strokeStyle = 'rgba(255, 50, 0, 0.15)';
+                    ctx.strokeStyle = currentColor;
                     ctx.lineWidth = 3;
                     ctx.lineJoin = 'round';
                     ctx.lineCap = 'round';
@@ -44,6 +53,23 @@ export default class extends Controller {
             }),
         });
 
+        // Color scheme dropdown control
+        const select = document.createElement('select');
+        for (const [name, color] of Object.entries(COLOR_SCHEMES)) {
+            const option = document.createElement('option');
+            option.value = color;
+            option.textContent = name.charAt(0).toUpperCase() + name.slice(1);
+            select.appendChild(option);
+        }
+        select.addEventListener('change', () => {
+            currentColor = select.value;
+            vectorTileLayer.changed();
+        });
+
+        const controlElement = document.createElement('div');
+        controlElement.className = 'color-scheme-control ol-unselectable ol-control';
+        controlElement.appendChild(select);
+
         const baseLayer = new Group();
 
         const map = new Map({
@@ -54,6 +80,8 @@ export default class extends Controller {
                 zoom: this.zoomValue,
             }),
         });
+
+        map.addControl(new Control({ element: controlElement }));
 
         apply(baseLayer, 'https://tiles.openfreemap.org/styles/liberty');
     }
