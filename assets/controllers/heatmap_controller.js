@@ -30,10 +30,10 @@ export default class extends Controller {
 
         const vectorTileLayer = new VectorTileLayer({
             className: 'heatmap-layer',
-            renderMode: 'vector',
             source: new VectorTileSource({
                 format: new MVT(),
                 url: `/tiles/heatmaps/${identifier}/{z}/{x}/{y}.mvt`,
+                maxZoom: 14,
             }),
             style: new Style({
                 renderer(coordinates, state) {
