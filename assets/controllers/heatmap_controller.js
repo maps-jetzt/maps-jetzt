@@ -3,7 +3,7 @@ import { fromLonLat } from 'ol/proj';
 import { View } from 'ol';
 import { Group, VectorTile as VectorTileLayer } from 'ol/layer';
 import { VectorTile as VectorTileSource } from 'ol/source';
-import { Stroke, Style } from 'ol/style';
+import { Style } from 'ol/style';
 import { MVT } from 'ol/format';
 import { apply } from 'ol-mapbox-style';
 import Map from 'ol/Map';
@@ -20,23 +20,28 @@ export default class extends Controller {
         const identifier = this.identifierValue;
 
         const vectorTileLayer = new VectorTileLayer({
+            className: 'heatmap-layer',
+            renderMode: 'vector',
             source: new VectorTileSource({
                 format: new MVT(),
                 url: `/tiles/heatmaps/${identifier}/{z}/{x}/{y}.mvt`,
             }),
             style: new Style({
-                stroke: new Stroke({
-                    color: 'rgba(255, 50, 0, 0.15)',
-                    width: 3,
-                }),
+                renderer(coordinates, state) {
+                    const ctx = state.context;
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.strokeStyle = 'rgba(255, 50, 0, 0.15)';
+                    ctx.lineWidth = 3;
+                    ctx.lineJoin = 'round';
+                    ctx.lineCap = 'round';
+                    ctx.beginPath();
+                    ctx.moveTo(coordinates[0][0], coordinates[0][1]);
+                    for (let i = 1; i < coordinates.length; i++) {
+                        ctx.lineTo(coordinates[i][0], coordinates[i][1]);
+                    }
+                    ctx.stroke();
+                },
             }),
-        });
-
-        vectorTileLayer.on('prerender', function (evt) {
-            evt.context.globalCompositeOperation = 'lighter';
-        });
-        vectorTileLayer.on('postrender', function (evt) {
-            evt.context.globalCompositeOperation = 'source-over';
         });
 
         const baseLayer = new Group();
