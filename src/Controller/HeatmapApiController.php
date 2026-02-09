@@ -334,41 +334,45 @@ class HeatmapApiController extends AbstractController
             ]);
         }
 
-        $sql = "
-            SELECT ST_AsMVT(tile, 'heatmap', 4096, 'geom') AS mvt
-            FROM (
-                SELECT hp.id,
-                       ST_AsMVTGeom(
-                           hp.geom,
-                           ST_TileEnvelope(:z, :x, :y),
-                           4096,
-                           256,
-                           true
-                       ) AS geom
-                FROM heatmap_polyline hp
-                JOIN heatmap h ON h.id = hp.heatmap_id
-                WHERE h.identifier = :identifier
-                  AND ST_Intersects(
-                      hp.geom,
-                      ST_TileEnvelope(:z, :x, :y)
-                  )
-            ) AS tile
-        ";
+        try {
+            $sql = "
+                SELECT ST_AsMVT(tile, 'heatmap', 4096, 'geom') AS mvt
+                FROM (
+                    SELECT hp.id,
+                           ST_AsMVTGeom(
+                               hp.geom,
+                               ST_TileEnvelope(:z, :x, :y),
+                               4096,
+                               256,
+                               true
+                           ) AS geom
+                    FROM heatmap_polyline hp
+                    JOIN heatmap h ON h.id = hp.heatmap_id
+                    WHERE h.identifier = :identifier
+                      AND ST_Intersects(
+                          hp.geom,
+                          ST_TileEnvelope(:z, :x, :y)
+                      )
+                ) AS tile
+            ";
 
-        $stmt = $connection->executeQuery($sql, [
-            'z' => $z,
-            'x' => $x,
-            'y' => $y,
-            'identifier' => $identifier,
-        ]);
+            $stmt = $connection->executeQuery($sql, [
+                'z' => $z,
+                'x' => $x,
+                'y' => $y,
+                'identifier' => $identifier,
+            ]);
 
-        $mvt = $stmt->fetchOne();
+            $mvt = $stmt->fetchOne();
 
-        if (is_resource($mvt)) {
-            $mvt = stream_get_contents($mvt);
-        }
+            if (is_resource($mvt)) {
+                $mvt = stream_get_contents($mvt);
+            }
 
-        if ($mvt === false) {
+            if (!$mvt) {
+                $mvt = '';
+            }
+        } catch (\Throwable) {
             $mvt = '';
         }
 
