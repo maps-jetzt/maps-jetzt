@@ -1,0 +1,13 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Heatmap – {{ identifier }}{% endblock %}
+
+{% block body %}
+    <div class="container-fluid g-0">
+        <div class="row">
+            <div class="col-12">
+                <div id="map" data-controller="heatmap" data-heatmap-identifier-value="{{ identifier }}" style="position: absolute; top: 56px; bottom: 0; width: 100%;"></div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
