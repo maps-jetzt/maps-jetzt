@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}Plakate-App!{% endblock %}</title>
+    <title>{% block title %}maps.jetzt{% endblock %}</title>
     {% block stylesheets %}
         {{ encore_entry_link_tags('app') }}
     {% endblock %}
@@ -13,6 +13,11 @@
     {% endblock %}
 </head>
 <body>
+<nav class="navbar navbar-dark bg-dark navbar-expand-lg">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">maps.jetzt</a>
+    </div>
+</nav>
 {% block body %}{% endblock %}
 </body>
 </html>

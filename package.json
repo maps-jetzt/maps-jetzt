@@ -20,6 +20,7 @@
         "build": "encore production --progress"
     },
     "dependencies": {
+        "bootstrap": "5.3",
         "ol": "^10.2.1",
         "ol-mapbox-style": "^13.2.0"
     }
