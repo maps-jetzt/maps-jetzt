@@ -23,7 +23,7 @@ export default class extends Controller {
             style: function () {
                 return new Style({
                     stroke: new Stroke({
-                        color: 'rgba(255, 0, 0, 0.08)',
+                        color: 'rgba(255, 0, 0, 1)',
                         width: 2,
                     }),
                 });

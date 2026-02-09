@@ -25,11 +25,8 @@ export default class extends Controller {
             }),
             style: new Style({
                 stroke: new Stroke({
-                    color: 'red',
-                    width: 20000
-                }),
-                fill: new Fill({
-                    color: 'blue'
+                    color: 'rgba(255, 0, 0, 0.8)',
+                    width: 2
                 })
             })
         });
@@ -41,8 +38,8 @@ export default class extends Controller {
         const map = new Map({
             target: 'map',
             layers: [
-                vectorTileLayer,
                 osmLayer,
+                vectorTileLayer,
             ],
             view: new View({
                 center: fromLonLat([10, 50]),
