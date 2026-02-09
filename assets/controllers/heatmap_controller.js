@@ -1,10 +1,11 @@
 import { Controller } from '@hotwired/stimulus';
 import { fromLonLat } from 'ol/proj';
 import { View } from 'ol';
-import { Tile, VectorTile as VectorTileLayer } from 'ol/layer';
-import { OSM, VectorTile as VectorTileSource } from 'ol/source';
+import { Group, VectorTile as VectorTileLayer } from 'ol/layer';
+import { VectorTile as VectorTileSource } from 'ol/source';
 import { Stroke, Style } from 'ol/style';
 import { MVT } from 'ol/format';
+import { apply } from 'ol-mapbox-style';
 import Map from 'ol/Map';
 
 export default class extends Controller {
@@ -30,17 +31,17 @@ export default class extends Controller {
             },
         });
 
-        const osmLayer = new Tile({
-            source: new OSM(),
-        });
+        const baseLayer = new Group();
 
         const map = new Map({
             target: this.element,
-            layers: [osmLayer, vectorTileLayer],
+            layers: [baseLayer, vectorTileLayer],
             view: new View({
                 center: fromLonLat([10, 53]),
                 zoom: 12,
             }),
         });
+
+        apply(baseLayer, 'https://tiles.openfreemap.org/styles/liberty');
     }
 }
