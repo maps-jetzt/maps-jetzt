@@ -34,6 +34,10 @@ class Heatmap
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $updatedAt = null;
 
+    #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'heatmaps')]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?User $user = null;
+
     /** @var Collection<int, HeatmapPolyline> */
     #[ORM\OneToMany(targetEntity: HeatmapPolyline::class, mappedBy: 'heatmap', cascade: ['remove'])]
     private Collection $polylines;
@@ -112,6 +116,17 @@ class Heatmap
     public function getUpdatedAt(): ?\DateTimeImmutable
     {
         return $this->updatedAt;
+    }
+
+    public function getUser(): ?User
+    {
+        return $this->user;
+    }
+
+    public function setUser(?User $user): self
+    {
+        $this->user = $user;
+        return $this;
     }
 
     /** @return Collection<int, HeatmapPolyline> */

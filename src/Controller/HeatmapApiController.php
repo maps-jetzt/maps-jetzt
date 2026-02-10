@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Heatmap;
 use App\Entity\HeatmapPolyline;
+use App\Entity\User;
 use App\Service\GooglePolylineDecoder;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
@@ -17,6 +18,11 @@ use Symfony\Component\Routing\Attribute\Route;
 #[OA\Tag(name: 'Heatmaps')]
 class HeatmapApiController extends AbstractController
 {
+    private function getUser(Request $request): User
+    {
+        return $request->attributes->get('_user');
+    }
+
     private function serializeHeatmap(Heatmap $heatmap): array
     {
         $data = [
@@ -74,6 +80,7 @@ class HeatmapApiController extends AbstractController
     )]
     public function createHeatmap(Request $request, EntityManagerInterface $em): JsonResponse
     {
+        $user = $this->getUser($request);
         $data = json_decode($request->getContent(), true);
         $identifier = $data['identifier'] ?? null;
 
@@ -81,13 +88,14 @@ class HeatmapApiController extends AbstractController
             return $this->json(['error' => 'identifier is required'], Response::HTTP_BAD_REQUEST);
         }
 
-        $existing = $em->getRepository(Heatmap::class)->findOneBy(['identifier' => $identifier]);
+        $existing = $em->getRepository(Heatmap::class)->findOneBy(['identifier' => $identifier, 'user' => $user]);
         if ($existing) {
             return $this->json(['error' => 'Heatmap with this identifier already exists'], Response::HTTP_CONFLICT);
         }
 
         $heatmap = new Heatmap();
         $heatmap->setIdentifier($identifier);
+        $heatmap->setUser($user);
         $this->applyViewport($heatmap, $data);
 
         $em->persist($heatmap);
@@ -118,7 +126,8 @@ class HeatmapApiController extends AbstractController
     )]
     public function updateHeatmap(string $identifier, Request $request, EntityManagerInterface $em): JsonResponse
     {
-        $heatmap = $em->getRepository(Heatmap::class)->findOneBy(['identifier' => $identifier]);
+        $user = $this->getUser($request);
+        $heatmap = $em->getRepository(Heatmap::class)->findOneBy(['identifier' => $identifier, 'user' => $user]);
         if (!$heatmap) {
             return $this->json(['error' => 'Heatmap not found'], Response::HTTP_NOT_FOUND);
         }
@@ -164,7 +173,8 @@ class HeatmapApiController extends AbstractController
         EntityManagerInterface $em,
         GooglePolylineDecoder $decoder,
     ): JsonResponse {
-        $heatmap = $em->getRepository(Heatmap::class)->findOneBy(['identifier' => $identifier]);
+        $user = $this->getUser($request);
+        $heatmap = $em->getRepository(Heatmap::class)->findOneBy(['identifier' => $identifier, 'user' => $user]);
         if (!$heatmap) {
             return $this->json(['error' => 'Heatmap not found'], Response::HTTP_NOT_FOUND);
         }
@@ -233,11 +243,12 @@ class HeatmapApiController extends AbstractController
             new OA\Response(response: 404, description: 'Heatmap not found'),
         ],
     )]
-    public function listPolylines(string $identifier, Connection $connection): JsonResponse
+    public function listPolylines(string $identifier, Request $request, Connection $connection): JsonResponse
     {
+        $user = $this->getUser($request);
         $heatmapId = $connection->fetchOne(
-            'SELECT id FROM heatmap WHERE identifier = :identifier',
-            ['identifier' => $identifier],
+            'SELECT id FROM heatmap WHERE identifier = :identifier AND user_id = :userId',
+            ['identifier' => $identifier, 'userId' => $user->getId()],
         );
 
         if ($heatmapId === false) {
@@ -283,11 +294,12 @@ class HeatmapApiController extends AbstractController
             new OA\Response(response: 404, description: 'Heatmap or polyline not found'),
         ],
     )]
-    public function deletePolyline(string $identifier, string $hash, Connection $connection): Response
+    public function deletePolyline(string $identifier, string $hash, Request $request, Connection $connection): Response
     {
+        $user = $this->getUser($request);
         $heatmapId = $connection->fetchOne(
-            'SELECT id FROM heatmap WHERE identifier = :identifier',
-            ['identifier' => $identifier],
+            'SELECT id FROM heatmap WHERE identifier = :identifier AND user_id = :userId',
+            ['identifier' => $identifier, 'userId' => $user->getId()],
         );
 
         if ($heatmapId === false) {
