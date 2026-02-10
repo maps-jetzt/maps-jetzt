@@ -11,6 +11,7 @@ use Symfony\Component\Routing\Attribute\Route;
 class HeatmapController extends AbstractController
 {
     #[Route('/heatmap/{identifier}', name: 'app_heatmap')]
+    #[Route('/{identifier}', name: 'app_heatmap_subdomain', host: 'heat.maps.jetzt')]
     public function index(string $identifier, EntityManagerInterface $em): Response
     {
         $heatmap = $em->getRepository(Heatmap::class)->findOneBy(['identifier' => $identifier]);
