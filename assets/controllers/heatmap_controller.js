@@ -17,12 +17,7 @@ const COLOR_SCHEMES = {
     green:  'rgba(0, 200, 50, 0.15)',
 };
 
-const SELECTED_COLORS = {
-    fire:   'rgba(255, 80, 30, 0.7)',
-    blue:   'rgba(50, 140, 255, 0.7)',
-    purple: 'rgba(180, 50, 255, 0.7)',
-    green:  'rgba(50, 230, 80, 0.7)',
-};
+const SELECTED_COLOR = 'rgba(255, 255, 255, 0.85)';
 
 function renderLines(coordinates, ctx) {
     const lines = Array.isArray(coordinates[0][0])
@@ -49,8 +44,7 @@ export default class extends Controller {
         const identifier = this.identifierValue;
         let currentScheme = 'fire';
         let currentColor = COLOR_SCHEMES.fire;
-        let selectedColor = SELECTED_COLORS.fire;
-        let selectedId = null;
+        let selectedHash = null;
 
         const tileSource = new VectorTileSource({
             format: new MVT(),
@@ -64,8 +58,8 @@ export default class extends Controller {
             style: new Style({
                 renderer(coordinates, state) {
                     const ctx = state.context;
-                    const featureId = state.feature.getId();
-                    const isSelected = selectedId !== null && featureId === selectedId;
+                    const featureHash = state.feature.get('hash');
+                    const isSelected = selectedHash !== null && featureHash === selectedHash;
 
                     ctx.save();
                     ctx.lineJoin = 'round';
@@ -75,8 +69,13 @@ export default class extends Controller {
 
                     if (isSelected) {
                         ctx.globalCompositeOperation = 'source-over';
-                        ctx.strokeStyle = selectedColor;
-                        ctx.lineWidth = 5;
+                        ctx.strokeStyle = '#000';
+                        ctx.lineWidth = 7;
+                        ctx.stroke();
+                        ctx.beginPath();
+                        renderLines(coordinates, ctx);
+                        ctx.strokeStyle = '#fff';
+                        ctx.lineWidth = 3;
                     } else {
                         ctx.globalCompositeOperation = 'lighter';
                         ctx.strokeStyle = currentColor;
@@ -103,7 +102,6 @@ export default class extends Controller {
             select.addEventListener('change', () => {
                 currentScheme = select.value;
                 currentColor = COLOR_SCHEMES[currentScheme];
-                selectedColor = SELECTED_COLORS[currentScheme];
                 vectorTileLayer.changed();
             });
         }
@@ -144,7 +142,7 @@ export default class extends Controller {
 
             if (hit) {
                 const hash = hit.get('hash');
-                selectedId = hit.getId();
+                selectedHash = hash;
                 vectorTileLayer.changed();
 
                 const shortHash = hash ? hash.substring(0, 8) : '?';
@@ -163,14 +161,14 @@ export default class extends Controller {
                         method: 'DELETE',
                     }).then((res) => {
                         if (res.ok) {
-                            selectedId = null;
+                            selectedHash = null;
                             overlay.setPosition(undefined);
                             tileSource.refresh();
                         }
                     });
                 });
             } else {
-                selectedId = null;
+                selectedHash = null;
                 overlay.setPosition(undefined);
                 vectorTileLayer.changed();
             }
