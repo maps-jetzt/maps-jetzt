@@ -338,7 +338,7 @@ class HeatmapApiController extends AbstractController
             $sql = "
                 SELECT ST_AsMVT(tile, 'heatmap', 4096, 'geom') AS mvt
                 FROM (
-                    SELECT hp.id,
+                    SELECT hp.id, hp.hash,
                            ST_AsMVTGeom(
                                hp.geom,
                                ST_TileEnvelope(:z, :x, :y),
