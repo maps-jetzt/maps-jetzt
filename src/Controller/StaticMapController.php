@@ -30,6 +30,7 @@ class StaticMapController extends AbstractController
     }
 
     #[Route('/api/static-map', name: 'api_static_map', methods: ['POST'])]
+    #[Route('/', name: 'api_static_map_subdomain', methods: ['POST'], host: 'static.maps.jetzt')]
     #[OA\Post(
         summary: 'Generate a static map image with elements',
         description: 'Creates a PNG image showing polylines and markers on OpenStreetMap tiles',
@@ -256,6 +257,7 @@ class StaticMapController extends AbstractController
     }
 
     #[Route('/maps/{filename}', name: 'static_map_image', methods: ['GET'])]
+    #[Route('/{filename}', name: 'static_map_image_subdomain', methods: ['GET'], host: 'static.maps.jetzt')]
     public function getImage(string $filename): Response
     {
         // Validate filename format (MD5 hash + .png)
@@ -276,6 +278,7 @@ class StaticMapController extends AbstractController
     }
 
     #[Route('/api/maps/{filename}', name: 'static_map_delete', methods: ['DELETE'])]
+    #[Route('/{filename}', name: 'static_map_delete_subdomain', methods: ['DELETE'], host: 'static.maps.jetzt')]
     #[OA\Delete(
         summary: 'Delete a generated static map image',
         parameters: [
